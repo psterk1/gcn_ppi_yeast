@@ -53,15 +53,13 @@ def sparse_to_tuple(sparse_mx):
     return coords, values, shape
 
 
-""" Preprocessing of adjacency matrix for simple GCN model and conversion to tuple representation. 
-    Symmetrically normalize adjacency matrix."""
-def preprocess_graph(adj):
+""" Symmetrically normalize adjacency matrix.for simple GCN model """
+def normalize_graph(adj):
     adj = sp.coo_matrix(adj)
     adj_ = adj + sp.eye(adj.shape[0])
     rowsum = np.array(adj_.sum(1))
     degree_mat_inv_sqrt = sp.diags(np.power(rowsum, -0.5).flatten())
-    adj_normalized = adj_.dot(degree_mat_inv_sqrt).transpose().dot(degree_mat_inv_sqrt).tocoo()
-    return sparse_to_tuple(adj_normalized)
+    return adj_.dot(degree_mat_inv_sqrt).transpose().dot(degree_mat_inv_sqrt).tocoo()
 
 
 def construct_feed_dict(adj_normalized, adj, features, placeholders):
@@ -224,7 +222,7 @@ class Optimizer():
 # and train a GCN model that can predict new protein-protein interactions. That is, we would like to predict new
 # edges in the yeast protein interaction network.
 print("Start")
-adj, adj_train, val_edges, val_edges_false, test_edges, test_edges_false  = load_data()
+adj, adj_train, val_edges, val_edges_false, test_edges, test_edges_false = load_data()
 
 num_nodes = adj.shape[0]
 num_edges = adj.sum()
@@ -240,11 +238,7 @@ features_nonzero = features[1].shape[0]
 adj_orig = adj - sp.dia_matrix((adj.diagonal()[np.newaxis, :], [0]), shape=adj.shape)
 adj_orig.eliminate_zeros()
 
-print("Datasets loaded")
-
-adj_norm = preprocess_graph(adj_train)
-print("Graph preprocessed")
-print("Done")
+adj_norm = sparse_to_tuple(normalize_graph(adj_train))
 
 # Define placeholders
 placeholders = {
