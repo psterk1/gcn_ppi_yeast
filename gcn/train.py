@@ -41,6 +41,9 @@ def dropout_sparse(x, keep_prob, num_nonzero_elems):
     return pre_out * (1. / keep_prob)
 
 
+"""
+Convert sparse matrix to tuple representation.
+"""
 def sparse_to_tuple(sparse_mx):
     if not sp.isspmatrix_coo(sparse_mx):
         sparse_mx = sparse_mx.tocoo()
@@ -50,6 +53,8 @@ def sparse_to_tuple(sparse_mx):
     return coords, values, shape
 
 
+""" Preprocessing of adjacency matrix for simple GCN model and conversion to tuple representation. 
+    Symmetrically normalize adjacency matrix."""
 def preprocess_graph(adj):
     adj = sp.coo_matrix(adj)
     adj_ = adj + sp.eye(adj.shape[0])
@@ -214,12 +219,20 @@ class Optimizer():
         self.opt_op = self.optimizer.minimize(self.cost)
         self.grads_vars = self.optimizer.compute_gradients(self.cost)
 
+
 # Given a training set of protein-protein interactions in yeast S. cerevisiae, our goal is to take these interactions
 # and train a GCN model that can predict new protein-protein interactions. That is, we would like to predict new
 # edges in the yeast protein interaction network.
 print("Start")
-adj, num_nodes, num_edges, features, num_features, features_nonzero, adj_train, train_edges, val_edges, \
-    val_edges_false, test_edges, test_edges_false = load_data()
+adj, adj_train, val_edges, val_edges_false, test_edges, test_edges_false  = load_data()
+
+num_nodes = adj.shape[0]
+num_edges = adj.sum()
+
+# Featureless
+features = sparse_to_tuple(sp.identity(num_nodes))
+num_features = features[2][1]
+features_nonzero = features[1].shape[0]
 
 #
 # # Store original adjacency matrix (without diagonal entries) for later
@@ -227,11 +240,9 @@ adj, num_nodes, num_edges, features, num_features, features_nonzero, adj_train, 
 adj_orig = adj - sp.dia_matrix((adj.diagonal()[np.newaxis, :], [0]), shape=adj.shape)
 adj_orig.eliminate_zeros()
 
+print("Datasets loaded")
 
-print ("Datasets loaded")
-adj = adj_train
-
-adj_norm = preprocess_graph(adj)
+adj_norm = preprocess_graph(adj_train)
 print("Graph preprocessed")
 print("Done")
 
@@ -253,11 +264,10 @@ with tf.name_scope('optimizer'):
         labels=tf.reshape(tf.sparse_tensor_to_dense(placeholders['adj_orig'], validate_indices=False), [-1]),
         num_nodes=num_nodes,
         num_edges=num_edges)
-print ("Finished creating optimizer")
-
+print("Finished creating optimizer")
 
 # Initialize session
-print ("Start session")
+print("Start session")
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
