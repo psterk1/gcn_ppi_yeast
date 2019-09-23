@@ -3,12 +3,11 @@ import time
 import numpy as np
 import scipy.sparse as sp
 
-import networkx as nx
 import tensorflow as tf
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 
-from gcn.utils import load_data, load_datasets
+from gcn.utils import load_data
 
 # Set random seed
 seed = 123
@@ -23,15 +22,6 @@ flags.DEFINE_integer('epochs', 20, 'Number of epochs to train.')
 flags.DEFINE_integer('hidden1', 32, 'Number of units in hidden layer 1.')
 flags.DEFINE_integer('hidden2', 16, 'Number of units in hidden layer 2.')
 flags.DEFINE_float('dropout', 0.1, 'Dropout rate (1 - keep probability).')
-
-
-def sparse_to_tuple(sparse_mx):
-    if not sp.isspmatrix_coo(sparse_mx):
-        sparse_mx = sparse_mx.tocoo()
-    coords = np.vstack((sparse_mx.row, sparse_mx.col)).transpose()
-    values = sparse_mx.data
-    shape = sparse_mx.shape
-    return coords, values, shape
 
 
 def weight_variable_glorot(input_dim, output_dim, name=""):
@@ -228,13 +218,9 @@ class Optimizer():
 # and train a GCN model that can predict new protein-protein interactions. That is, we would like to predict new
 # edges in the yeast protein interaction network.
 print("Start")
-adj, adj_train, train_edges, val_edges, val_edges_false, test_edges, test_edges_false = load_datasets()
-num_nodes = adj.shape[0]
-num_edges = adj.sum()
-# Featureless
-features = sparse_to_tuple(sp.identity(num_nodes))
-num_features = features[2][1]
-features_nonzero = features[1].shape[0]
+adj, num_nodes, num_edges, features, num_features, features_nonzero, adj_train, train_edges, val_edges, \
+    val_edges_false, test_edges, test_edges_false = load_data()
+
 #
 # # Store original adjacency matrix (without diagonal entries) for later
 # print ("Store original adjacency matrix")

@@ -8,12 +8,13 @@ import _pickle as pickle
 def load_data():
     g = nx.read_edgelist('data/yeast.edgelist')
     adj = nx.adjacency_matrix(g)
-    return adj
 
-
-def load_datasets():
-    g = nx.read_edgelist('data/yeast.edgelist')
-    adj = nx.adjacency_matrix(g)
+    num_nodes = adj.shape[0]
+    num_edges = adj.sum()
+    # Featureless
+    features = sparse_to_tuple(sp.identity(num_nodes))
+    num_features = features[2][1]
+    features_nonzero = features[1].shape[0]
 
     with open('data/adj_train.npz', 'rb') as f:
         local_adj_train = sp.load_npz(f)
@@ -38,8 +39,8 @@ def load_datasets():
         local_val_edges_false = pickle.load(f)
         print("val_edges_false len: {}\n".format(len(local_val_edges_false)))
 
-    return adj, local_adj_train, local_train_edges, local_val_edges, local_val_edges_false, local_test_edges, \
-        local_val_edges_false
+    return adj, num_nodes, num_edges, features, num_features, features_nonzero, local_adj_train, local_train_edges, \
+        local_val_edges, local_val_edges_false, local_test_edges, local_val_edges_false
 
 
 def sparse_to_tuple(sparse_mx):
