@@ -181,7 +181,7 @@ class GCNModel():
         self.hidden1 = GraphConvolutionSparse(
             name='gcn_sparse_layer',
             input_dim=self.input_dim,
-            output_dim=32,
+            output_dim=FLAGS.hidden1,
             adj=self.adj,
             features_nonzero=self.features_nonzero,
             act=tf.nn.relu,
@@ -189,15 +189,15 @@ class GCNModel():
 
         self.embeddings = GraphConvolution(
             name='gcn_dense_layer',
-            input_dim=32,
-            output_dim=16,
+            input_dim=FLAGS.hidden1,
+            output_dim=FLAGS.hidden2,
             adj=self.adj,
             act=lambda x: x,
             dropout=self.dropout)(self.hidden1)
 
         self.reconstructions = InnerProductDecoder(
             name='gcn_decoder',
-            input_dim=16,
+            input_dim=FLAGS.hidden2,
             act=lambda x: x)(self.embeddings)
 
 
@@ -212,7 +212,7 @@ class Optimizer():
         self.cost = norm * tf.reduce_mean(
             tf.nn.weighted_cross_entropy_with_logits(
                 logits=preds_sub, targets=labels_sub, pos_weight=pos_weight))
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=0.01)  # Adam Optimizer
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)  # Adam Optimizer
 
         self.opt_op = self.optimizer.minimize(self.cost)
         self.grads_vars = self.optimizer.compute_gradients(self.cost)
@@ -269,11 +269,11 @@ adj_label = adj_train + sp.eye(adj_train.shape[0])
 adj_label = sparse_to_tuple(adj_label)
 
 # Train model
-for epoch in range(20):
+for epoch in range(FLAGS.epochs):
     t = time.time()
     # Construct feed dictionary
     feed_dict = construct_feed_dict(adj_norm, adj_label, features, placeholders)
-    feed_dict.update({placeholders['dropout']: 0.1})
+    feed_dict.update({placeholders['dropout']: FLAGS.dropout})
     # One update of parameter matrices
     _, avg_cost = sess.run([opt.opt_op, opt.cost], feed_dict=feed_dict)
     # Performance on validation set
