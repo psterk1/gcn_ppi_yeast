@@ -22,19 +22,15 @@ def load_data():
 
     with open('data/val_edges.npy', 'rb') as f:
         val_edges = np.load(f)
-        print("val_edges.shape: {}\n".format(val_edges.shape))
 
     with open('data/val_edges_false.p', 'rb') as f:
         val_edges_false = pickle.load(f)
-        print("val_edges_false len: {}\n".format(len(val_edges_false)))
 
     with open('data/test_edges.npy', 'rb') as f:
         test_edges = np.load(f)
-        print("test_edges.shape: {}\n".format(test_edges.shape))
 
     with open('data/test_edges_false.p', 'rb') as f:
         test_edges_false = pickle.load(f)
-        print("test_edges_false len: {}\n".format(len(test_edges_false)))
 
     return adj, adj_train, val_edges, val_edges_false, test_edges, test_edges_false
 
@@ -142,18 +138,14 @@ def mask_test_edges(adj):
 
     with open('data/val_edges.npy', 'wb') as f:
         np.save(f, val_edges)
-        print("val_edges.shape: {}\n".format(val_edges.shape))
 
     with open('data/val_edges_false.p', 'wb') as f:
         pickle.dump(val_edges_false, f)
-        print("val_edges_false len: {}\n".format(len(val_edges_false)))
 
     with open('data/test_edges.npy', 'wb') as f:
         np.save(f, test_edges)
-        print("test_edges.shape: {}\n".format(test_edges.shape))
 
     with open('data/test_edges_false.p', 'wb') as f:
         pickle.dump(test_edges_false, f)
-        print("test_edges_false len: {}\n".format(len(val_edges_false)))
 
     return adj_train, adj_val, adj_test, val_edges, val_edges_false, test_edges, test_edges_false
