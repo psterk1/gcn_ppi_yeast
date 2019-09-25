@@ -2,12 +2,12 @@ import time
 
 import numpy as np
 import scipy.sparse as sp
-
 import tensorflow as tf
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
+import networkx as nx
 
-from gcn.utils import load_data
+from gcn.utils import load_data, mask_test_edges
 
 # Set random seed
 seed = 123
@@ -22,6 +22,8 @@ flags.DEFINE_integer('epochs', 20, 'Number of epochs to train.')
 flags.DEFINE_integer('hidden1', 32, 'Number of units in hidden layer 1.')
 flags.DEFINE_integer('hidden2', 16, 'Number of units in hidden layer 2.')
 flags.DEFINE_float('dropout', 0.1, 'Dropout rate (1 - keep probability).')
+flags.DEFINE_boolean('regenerate_training_data', False, 'Flag to indicate whether or not to '
+                     'regenerate training/val/test data. Default: load precalculated datasets')
 
 
 def weight_variable_glorot(input_dim, output_dim, name=""):
@@ -53,7 +55,20 @@ def sparse_to_tuple(sparse_mx):
     return coords, values, shape
 
 
-""" Symmetrically normalize adjacency matrix.for simple GCN model """
+""" 
+   Symmetrically normalize adjacency matrix.for simple GCN model 
+    multiplication with A means that, for every node, we sum up all the feature vectors of all neighboring nodes but 
+    not the node itself (unless there are self-loops in the graph). We can "fix" this by enforcing self-loops in the 
+    graph: we simply add the identity matrix to A.
+    
+    The second major limitation is that A is typically not normalized and therefore the multiplication with A will 
+    completely change the scale of the feature vectors (we can understand that by looking at the eigenvalues of A). 
+    Normalizing A such that all rows sum to one, i.e. D−1A, where D is the diagonal node degree matrix, gets rid of 
+    this problem. Multiplying with D−1A now corresponds to taking the average of neighboring node features. 
+    In practice, dynamics get more interesting when we use a symmetric normalization, i.e. D−12AD−12 (as this no 
+    longer amounts to mere averaging of neighboring nodes). Combining these two tricks, we essentially arrive at the 
+    propagation rule introduced in Kipf & Welling (ICLR 2017):
+    """
 def normalize_graph(adj):
     adj = sp.coo_matrix(adj)
     adj_ = adj + sp.eye(adj.shape[0])
@@ -222,23 +237,29 @@ class Optimizer():
 # and train a GCN model that can predict new protein-protein interactions. That is, we would like to predict new
 # edges in the yeast protein interaction network.
 print("Start")
+# Check if regenerate_training_date is set to True: regenerate training/validation/test data
 adj, adj_train, val_edges, val_edges_false, test_edges, test_edges_false = load_data()
 
 num_nodes = adj.shape[0]
 num_edges = adj.sum()
 
-# Featureless
+#
+# Simple GCN: no node features (featureless). Substitute the identity matrix for the feature matrix: X = I
+#
 features = sparse_to_tuple(sp.identity(num_nodes))
 num_features = features[2][1]
 features_nonzero = features[1].shape[0]
 
 #
-# # Store original adjacency matrix (without diagonal entries) for later
-# print ("Store original adjacency matrix")
-adj_orig = adj - sp.dia_matrix((adj.diagonal()[np.newaxis, :], [0]), shape=adj.shape)
+# Store original adjacency matrix (without diagonal entries) for later
+#
+adj_orig = (adj - sp.dia_matrix((adj.diagonal()[np.newaxis, :], [0]), shape=adj.shape))
 adj_orig.eliminate_zeros()
 
 adj_norm = sparse_to_tuple(normalize_graph(adj_train))
+
+adj_label = adj_train + sp.eye(adj_train.shape[0])
+adj_label = sparse_to_tuple(adj_label)
 
 # Define placeholders
 placeholders = {
@@ -265,14 +286,11 @@ print("Start session")
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
-adj_label = adj_train + sp.eye(adj_train.shape[0])
-adj_label = sparse_to_tuple(adj_label)
-
+# Construct feed dictionary
+feed_dict = construct_feed_dict(adj_norm, adj_label, features, placeholders)
 # Train model
 for epoch in range(FLAGS.epochs):
     t = time.time()
-    # Construct feed dictionary
-    feed_dict = construct_feed_dict(adj_norm, adj_label, features, placeholders)
     feed_dict.update({placeholders['dropout']: FLAGS.dropout})
     # One update of parameter matrices
     _, avg_cost = sess.run([opt.opt_op, opt.cost], feed_dict=feed_dict)

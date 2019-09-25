@@ -14,9 +14,15 @@ def load_data():
     with open('data/adj_train.npz', 'rb') as f:
         adj_train = sp.load_npz(f)
 
+    with open('data/adj_val.npz', 'rb') as f:
+        adj_val = sp.load_npz(f)
+
+    with open('data/adj_test.npz', 'rb') as f:
+        adj_test = sp.load_npz(f)
+
     with open('data/val_edges.npy', 'rb') as f:
         val_edges = np.load(f)
-        print("train_edges.shape: {}\n".format(val_edges.shape))
+        print("val_edges.shape: {}\n".format(val_edges.shape))
 
     with open('data/val_edges_false.p', 'rb') as f:
         val_edges_false = pickle.load(f)
@@ -26,11 +32,11 @@ def load_data():
         test_edges = np.load(f)
         print("test_edges.shape: {}\n".format(test_edges.shape))
 
-    with open('data/val_edges_false.p', 'rb') as f:
-        val_edges_false = pickle.load(f)
-        print("val_edges_false len: {}\n".format(len(val_edges_false)))
+    with open('data/test_edges_false.p', 'rb') as f:
+        test_edges_false = pickle.load(f)
+        print("test_edges_false len: {}\n".format(len(test_edges_false)))
 
-    return adj, adj_train, val_edges, val_edges_false, test_edges, val_edges_false
+    return adj, adj_train, val_edges, val_edges_false, test_edges, test_edges_false
 
 
 def sparse_to_tuple(sparse_mx):
@@ -118,5 +124,36 @@ def mask_test_edges(adj):
     data = np.ones(train_edges.shape[0])
     adj_train = sp.csr_matrix((data, (train_edges[:, 0], train_edges[:, 1])), shape=adj.shape)
     adj_train = adj_train + adj_train.T
+    data = np.ones(val_edges.shape[0])
+    adj_val = sp.csr_matrix((data, (val_edges[:, 0], val_edges[:, 1])), shape=adj.shape)
+    adj_val = adj_val + adj_val.T
+    data = np.ones(test_edges.shape[0])
+    adj_test = sp.csr_matrix((data, (test_edges[:, 0], test_edges[:, 1])), shape=adj.shape)
+    adj_test = adj_test + adj_test.T
 
-    return adj_train, train_edges, val_edges, val_edges_false, test_edges, test_edges_false
+    with open('data/adj_train.npz', 'wb') as f:
+        sp.save_npz(f, adj_train)
+
+    with open('data/adj_val.npz', 'wb') as f:
+        sp.save_npz(f, adj_val)
+
+    with open('data/adj_test.npz', 'wb') as f:
+        sp.save_npz(f, adj_test)
+
+    with open('data/val_edges.npy', 'wb') as f:
+        np.save(f, val_edges)
+        print("val_edges.shape: {}\n".format(val_edges.shape))
+
+    with open('data/val_edges_false.p', 'wb') as f:
+        pickle.dump(val_edges_false, f)
+        print("val_edges_false len: {}\n".format(len(val_edges_false)))
+
+    with open('data/test_edges.npy', 'wb') as f:
+        np.save(f, test_edges)
+        print("test_edges.shape: {}\n".format(test_edges.shape))
+
+    with open('data/test_edges_false.p', 'wb') as f:
+        pickle.dump(test_edges_false, f)
+        print("test_edges_false len: {}\n".format(len(val_edges_false)))
+
+    return adj_train, adj_val, adj_test, val_edges, val_edges_false, test_edges, test_edges_false
