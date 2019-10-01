@@ -7,7 +7,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 import networkx as nx
 
-from gcn.utils import load_data, sparse_to_tuple, weight_variable_glorot, dropout_sparse
+from gcn.utils import load_data, sparse_to_tuple, weight_variable_glorot, dropout_sparse, sym_normalize_matrix
 
 # Set random seed
 seed = 123
@@ -24,28 +24,6 @@ flags.DEFINE_integer('hidden2', 16, 'Number of units in hidden layer 2.')
 flags.DEFINE_float('dropout', 0.1, 'Dropout rate (1 - keep probability).')
 flags.DEFINE_boolean('regenerate_training_data', False, 'Flag to indicate whether or not to '
                      'regenerate training/val/test data. Default: load precalculated datasets')
-
-
-""" 
-   Symmetrically normalize adjacency matrix.for simple GCN model 
-    multiplication with A means that, for every node, we sum up all the feature vectors of all neighboring nodes but 
-    not the node itself (unless there are self-loops in the graph). We can "fix" this by enforcing self-loops in the 
-    graph: we simply add the identity matrix to A.
-    
-    The second major limitation is that A is typically not normalized and therefore the multiplication with A will 
-    completely change the scale of the feature vectors (we can understand that by looking at the eigenvalues of A). 
-    Normalizing A such that all rows sum to one, i.e. D−1A, where D is the diagonal node degree matrix, gets rid of 
-    this problem. Multiplying with D−1A now corresponds to taking the average of neighboring node features. 
-    In practice, dynamics get more interesting when we use a symmetric normalization, i.e. D−12AD−12 (as this no 
-    longer amounts to mere averaging of neighboring nodes). Combining these two tricks, we essentially arrive at the 
-    propagation rule introduced in Kipf & Welling (ICLR 2017):
-    """
-def sys_normalize_matrix(adj):
-    adj_ = sp.coo_matrix(adj)
-    rowsum = np.array(adj_.sum(1))
-    degree_mat_inv_sqrt = sp.diags(np.power(rowsum, -0.5).flatten())
-    return adj_.dot(degree_mat_inv_sqrt).transpose().dot(degree_mat_inv_sqrt).tocoo()
-
 
 
 def construct_feed_dict(adj_normalized, adj, features, placeholders):
@@ -227,7 +205,7 @@ features_nonzero = features[1].shape[0]
 adj_orig = (adj - sp.dia_matrix((adj.diagonal()[np.newaxis, :], [0]), shape=adj.shape))
 adj_orig.eliminate_zeros()
 
-adj_norm = sparse_to_tuple(sys_normalize_matrix(adj_train + sp.eye(adj.shape[0])))
+adj_norm = sparse_to_tuple(sym_normalize_matrix(adj_train + sp.eye(adj.shape[0])))
 
 # Since the adj_train matrix was not created with diagonal entires, add them now.
 adj_label = sparse_to_tuple(adj_train + sp.eye(adj_train.shape[0]))

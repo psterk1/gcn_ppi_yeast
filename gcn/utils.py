@@ -25,10 +25,22 @@ def dropout_sparse(x, keep_prob, num_nonzero_elems):
     pre_out = tf.compat.v1.sparse_retain(x, dropout_mask)
     return pre_out * (1. / keep_prob)
 
-#
-# adj object is a compressed sparse row (CSR) matrix and returns a coordinate format
-#
-def sys_normalize_matrix(adj):
+
+""" 
+   Symmetrically normalize adjacency matrix.for simple GCN model 
+    multiplication with A means that, for every node, we sum up all the feature vectors of all neighboring nodes but 
+    not the node itself (unless there are self-loops in the graph). We can "fix" this by enforcing self-loops in the 
+    graph: we simply add the identity matrix to A.
+
+    The second major limitation is that A is typically not normalized and therefore the multiplication with A will 
+    completely change the scale of the feature vectors (we can understand that by looking at the eigenvalues of A). 
+    Normalizing A such that all rows sum to one, i.e. D−1A, where D is the diagonal node degree matrix, gets rid of 
+    this problem. Multiplying with D−1A now corresponds to taking the average of neighboring node features. 
+    In practice, dynamics get more interesting when we use a symmetric normalization, i.e. D−12AD−12 (as this no 
+    longer amounts to mere averaging of neighboring nodes). Combining these two tricks, we essentially arrive at the 
+    propagation rule introduced in Kipf & Welling (ICLR 2017):
+    """
+def sym_normalize_matrix(adj):
     adj_ = sp.coo_matrix(adj)
     rowsum = np.array(adj_.sum(1))
     degree_mat_inv_sqrt = sp.diags(np.power(rowsum, -0.5).flatten())
