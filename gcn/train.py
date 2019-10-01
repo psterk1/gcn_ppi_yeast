@@ -40,12 +40,12 @@ flags.DEFINE_boolean('regenerate_training_data', False, 'Flag to indicate whethe
     longer amounts to mere averaging of neighboring nodes). Combining these two tricks, we essentially arrive at the 
     propagation rule introduced in Kipf & Welling (ICLR 2017):
     """
-def normalize_graph(adj):
-    adj = sp.coo_matrix(adj)
-    adj_ = adj + sp.eye(adj.shape[0])
+def sys_normalize_matrix(adj):
+    adj_ = sp.coo_matrix(adj)
     rowsum = np.array(adj_.sum(1))
     degree_mat_inv_sqrt = sp.diags(np.power(rowsum, -0.5).flatten())
     return adj_.dot(degree_mat_inv_sqrt).transpose().dot(degree_mat_inv_sqrt).tocoo()
+
 
 
 def construct_feed_dict(adj_normalized, adj, features, placeholders):
@@ -227,10 +227,10 @@ features_nonzero = features[1].shape[0]
 adj_orig = (adj - sp.dia_matrix((adj.diagonal()[np.newaxis, :], [0]), shape=adj.shape))
 adj_orig.eliminate_zeros()
 
-adj_norm = sparse_to_tuple(normalize_graph(adj_train))
+adj_norm = sparse_to_tuple(sys_normalize_matrix(adj_train + sp.eye(adj.shape[0])))
 
-adj_label = adj_train + sp.eye(adj_train.shape[0])
-adj_label = sparse_to_tuple(adj_label)
+# Since the adj_train matrix was not created with diagonal entires, add them now.
+adj_label = sparse_to_tuple(adj_train + sp.eye(adj_train.shape[0]))
 
 # Define placeholders
 placeholders = {
