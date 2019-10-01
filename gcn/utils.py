@@ -4,6 +4,26 @@ import scipy.sparse as sp
 import tensorflow as tf
 import _pickle as pickle
 
+#
+# One common initialization scheme for deep NNs is called Glorot (also known as Xavier) Initialization. The idea is to
+# initialize each weight with a small Gaussian value with mean = 0.0 and variance based on the fan-in and fan-out of
+# the weight. This works best for DNNs with multiple layers and a RELU activation function.
+#
+def weight_variable_glorot(input_dim, output_dim, name=""):
+    init_range = np.sqrt(6.0 / (input_dim + output_dim))
+    initial = tf.compat.v1.random_uniform(
+        [input_dim, output_dim], minval=-init_range,
+        maxval=init_range, dtype=tf.float32)
+    return tf.Variable(initial, name=name)
+
+
+def dropout_sparse(x, keep_prob, num_nonzero_elems):
+    noise_shape = [num_nonzero_elems]
+    random_tensor = keep_prob
+    random_tensor += tf.compat.v1.random_uniform(noise_shape)
+    dropout_mask = tf.cast(tf.floor(random_tensor), dtype=tf.bool)
+    pre_out = tf.compat.v1.sparse_retain(x, dropout_mask)
+    return pre_out * (1. / keep_prob)
 
 #
 # adj object is a compressed sparse row (CSR) matrix and returns a coordinate format

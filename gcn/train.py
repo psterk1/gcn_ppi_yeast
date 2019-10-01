@@ -7,7 +7,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 import networkx as nx
 
-from gcn.utils import load_data, sparse_to_tuple
+from gcn.utils import load_data, sparse_to_tuple, weight_variable_glorot, dropout_sparse
 
 # Set random seed
 seed = 123
@@ -24,24 +24,6 @@ flags.DEFINE_integer('hidden2', 16, 'Number of units in hidden layer 2.')
 flags.DEFINE_float('dropout', 0.1, 'Dropout rate (1 - keep probability).')
 flags.DEFINE_boolean('regenerate_training_data', False, 'Flag to indicate whether or not to '
                      'regenerate training/val/test data. Default: load precalculated datasets')
-
-
-def weight_variable_glorot(input_dim, output_dim, name=""):
-    init_range = np.sqrt(6.0 / (input_dim + output_dim))
-    initial = tf.random_uniform(
-        [input_dim, output_dim], minval=-init_range,
-        maxval=init_range, dtype=tf.float32)
-    return tf.Variable(initial, name=name)
-
-
-def dropout_sparse(x, keep_prob, num_nonzero_elems):
-    noise_shape = [num_nonzero_elems]
-    random_tensor = keep_prob
-    random_tensor += tf.random_uniform(noise_shape)
-    dropout_mask = tf.cast(tf.floor(random_tensor), dtype=tf.bool)
-    pre_out = tf.sparse_retain(x, dropout_mask)
-    return pre_out * (1. / keep_prob)
-
 
 
 """ 
