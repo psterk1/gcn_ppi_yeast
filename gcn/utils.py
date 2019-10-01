@@ -44,7 +44,7 @@ def sym_normalize_matrix(adj, dtype=np.float32):
     adj_ = sp.coo_matrix(adj)
     rowsum = np.array(adj_.sum(1))
     degree_mat_inv_sqrt = sp.diags(np.power(rowsum, -0.5).flatten())
-    return adj_.dot(degree_mat_inv_sqrt).transpose().dot(degree_mat_inv_sqrt).astype(dtype).tocoo()
+    return adj_.dot(degree_mat_inv_sqrt).transpose().dot(degree_mat_inv_sqrt).astype(dtype)
 
 
 #
