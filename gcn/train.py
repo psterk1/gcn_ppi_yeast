@@ -7,7 +7,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 import networkx as nx
 
-from gcn.utils import load_data, mask_test_edges
+from gcn.utils import load_data, sparse_to_tuple
 
 # Set random seed
 seed = 123
@@ -42,17 +42,6 @@ def dropout_sparse(x, keep_prob, num_nonzero_elems):
     pre_out = tf.sparse_retain(x, dropout_mask)
     return pre_out * (1. / keep_prob)
 
-
-"""
-Convert sparse matrix to tuple representation.
-"""
-def sparse_to_tuple(sparse_mx):
-    if not sp.isspmatrix_coo(sparse_mx):
-        sparse_mx = sparse_mx.tocoo()
-    coords = np.vstack((sparse_mx.row, sparse_mx.col)).transpose()
-    values = sparse_mx.data
-    shape = sparse_mx.shape
-    return coords, values, shape
 
 
 """ 

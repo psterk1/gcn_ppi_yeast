@@ -4,6 +4,17 @@ import scipy.sparse as sp
 import tensorflow as tf
 import _pickle as pickle
 
+
+#
+# adj object is a compressed sparse row (CSR) matrix and returns a coordinate format
+#
+def sys_normalize_matrix(adj):
+    adj_ = sp.coo_matrix(adj)
+    rowsum = np.array(adj_.sum(1))
+    degree_mat_inv_sqrt = sp.diags(np.power(rowsum, -0.5).flatten())
+    return adj_.dot(degree_mat_inv_sqrt).transpose().dot(degree_mat_inv_sqrt).tocoo()
+
+
 #
 # As an optimization, load precomputed masked edges
 #
